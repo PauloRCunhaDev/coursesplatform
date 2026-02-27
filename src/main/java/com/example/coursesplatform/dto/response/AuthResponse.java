@@ -14,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuthResponse {
     private UUID userId;
-    private String login;
+    private String email;
     private String fullName;
     private UserRole role;
     private Boolean emailVerified;

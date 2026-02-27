@@ -6,6 +6,8 @@ import com.example.coursesplatform.dto.response.AuthResponse;
 import com.example.coursesplatform.entity.EmailVerificationToken;
 import com.example.coursesplatform.entity.RefreshToken;
 import com.example.coursesplatform.entity.User;
+import com.example.coursesplatform.exception.custom.EmailAlreadyExistsException;
+import com.example.coursesplatform.exception.custom.InvalidCredentialsException;
 import com.example.coursesplatform.repository.EmailVerificationTokenRepository;
 import com.example.coursesplatform.repository.RefreshTokenRepository;
 import com.example.coursesplatform.repository.UserRepository;
@@ -37,14 +39,14 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("Tentando registrar usuário: {}", request.getLogin());
+        log.info("Tentando registrar usuário: {}", request.getEmail());
 
-        if(userRepository.existsByLogin(request.getLogin())) {
-            throw new EmailAlreadyExistsException("Email já cadastrado"); // Create Exception
+        if(userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException("Email já cadastrado");
         }
 
         User user = User.builder()
-                .login(request.getLogin())
+                .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .role(request.getRole())
@@ -61,7 +63,9 @@ public class AuthService {
                 .expiresAt(LocalDateTime.now().plusHours(24))
                 .build();
 
-        emailService.sendVerificationLogin(user.getLogin(), user.getFullName(), verificationToken); // Create method
+        emailVerificationTokenRepository.save(loginToken);
+
+        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationToken);
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
@@ -73,18 +77,18 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        log.info("Tentando fazer login: {}", request.getLogin());
+        log.info("Tentando fazer login: {}", request.getEmail());
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getLogin(),
+                            request.getEmail(),
                             request.getPassword()
                     )
             );
 
-            User user = userRepository.findByLogin(request.getLogin())
-                    .orElseThrow(() -> new InvalidCredentialsException("Credenciais inválidas")); // create exception
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new InvalidCredentialsException("Credenciais inválidas"));
 
             log.info("Login bem-sucedido: {}", user.getId());
 
@@ -99,8 +103,8 @@ public class AuthService {
             return buildAuthResponse(user, accessToken, refreshToken);
 
         } catch (AuthenticationException e) {
-            log.error("Falha na autenticação para: {}", request.getLogin());
-            throw new InvalidCredentialsException("Credenciais inválidas"); // create exception
+            log.error("Falha na autenticação para: {}", request.getEmail());
+            throw new InvalidCredentialsException("Credenciais inválidas");
         }
     }
 
@@ -127,7 +131,7 @@ public class AuthService {
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
         return AuthResponse.builder()
                 .userId(user.getId())
-                .login(user.getLogin())
+                .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .emailVerified(user.getEmailVerified())

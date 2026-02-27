@@ -34,7 +34,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(user.getId().toString())
-                .claim("email", user.getLogin())
+                .claim("login", user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("type", "access")
                 .issuedAt(now)
@@ -49,7 +49,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(user.getId().toString())
-                .claim("email", user.getLogin())
+                .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
                 .claim("type", "access")
                 .issuedAt(now)

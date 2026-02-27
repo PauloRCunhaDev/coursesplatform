@@ -24,7 +24,7 @@ public class User {
     private UUID id;
 
     @Column(unique = true, nullable = false)
-    private String login;
+    private String email;
 
     @Column(nullable = false)
     private String passwordHash;
